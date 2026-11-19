@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Expense Tracker</title>
+<style>
+  :root{
+    --bg:#16181d; --panel:#1f232b; --panel2:#262b35; --line:#323846;
+    --text:#e8ebf2; --muted:#8b93a7;
+    --accent:#2ee6a6; --accent2:#5b8cff; --warn:#ffb020;
+    --c-food:#ff7a59; --c-transport:#5b8cff; --c-bills:#b388ff; --c-shopping:#ff5fa2;
+    --c-health:#2ee6a6; --c-fun:#ffd23f; --c-other:#7fd4ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font:15px/1.45 ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    padding:20px 14px 48px;
+    background-image:radial-gradient(circle at 15% -10%,rgba(91,140,255,.12),transparent 40%),
+                     radial-gradient(circle at 100% 0%,rgba(46,230,166,.08),transparent 35%);
+  }
+  .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  h1{margin:0;font-size:20px;letter-spacing:.02em}
+  h1 span{color:var(--accent)}
+  .tag{color:var(--muted);font-size:12px}
+  .total-chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;text-align:right}
+  .total-chip small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+  .total-chip b{font-size:20px;color:var(--accent)}
+
+  section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .sec-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  h2{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+  h2 i{font-style:normal;color:var(--accent);margin-right:6px}
+
+  select,input,button{font:inherit;color:var(--text)}
+  select,input{
+    background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;
+    min-height:40px;
+  }
+  select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent2);outline-offset:1px}
+  .sort{width:auto;min-width:140px;padding:6px 10px;min-height:34px;font-size:13px}
+
+  /* list */
+  .rows{display:flex;flex-direction:column;gap:6px}
+  .row{
+    display:grid;grid-template-columns:auto 1fr auto;gap:2px 12px;align-items:center;
+    background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--cat,var(--accent));
+    border-radius:8px;padding:8px 12px;
+  }
+  .row.new{animation:pop .6s ease}
+  @keyframes pop{0%{background:rgba(46,230,166,.28);transform:translateY(-4px)}100%{background:var(--panel2);transform:none}}
+  .date{color:var(--muted);font-size:12px;grid-row:1/3}
+  .note{overflow-wrap:anywhere}
+  .meta{font-size:12px;color:var(--muted)}
+  .pill{display:inline-block;padding:0 7px;border-radius:99px;font-size:11px;color:#101216;background:var(--cat,var(--accent));margin-right:6px;font-weight:700}
+  .amt{text-align:right;font-weight:700;grid-row:1/3;grid-column:3}
+  .amt small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+  .foot{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);color:var(--muted);font-size:13px}
+  .foot b{color:var(--accent);font-size:16px}
+  .sample-note{font-size:11px;color:var(--muted);margin-top:8px}
+
+  /* form */
+  form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .full{grid-column:1/-1}
+  button.add{
+    grid-column:1/-1;background:var(--accent);color:#07130e;border:0;border-radius:8px;
+    min-height:44px;font-weight:800;letter-spacing:.04em;cursor:pointer;transition:transform .08s,filter .15s;
+  }
+  button.add:hover{filter:brightness(1.08)} button.add:active{transform:scale(.98)}
+  .err{grid-column:1/-1;color:var(--warn);font-size:12px;min-height:1em}
+
+  /* summary */
+  .cats{display:flex;flex-direction:column;gap:8px}
+  .cat{display:grid;grid-template-columns:110px 1fr auto;gap:10px;align-items:center;font-size:13px;padding:4px 6px;border-radius:8px;border:1px solid transparent}
+  .cat.top{border-color:var(--cat);background:rgba(255,255,255,.04);box-shadow:0 0 0 1px var(--cat) inset,0 0 14px -4px var(--cat)}
+  .bar{height:10px;background:#12141a;border-radius:6px;overflow:hidden}
+  .bar>div{height:100%;background:var(--cat);border-radius:6px;transition:width .4s ease}
+  .cat .v{text-align:right;min-width:96px}
+  .cat .v small{color:var(--muted)}
+  .badge{font-size:10px;background:var(--cat);color:#101216;border-radius:4px;padding:0 5px;margin-left:6px;font-weight:800;vertical-align:middle}
+  .insight{margin:0 0 12px;padding:8px 10px;border-radius:8px;background:var(--panel2);font-size:13px}
+  .insight b{color:var(--accent)}
+  h3{margin:16px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:400}
+  .trend{display:flex;align-items:flex-end;gap:6px;height:110px}
+  .tcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:3px;min-width:0}
+  .tbar{width:100%;max-width:44px;background:linear-gradient(var(--accent2),#3b5fc4);border-radius:4px 4px 0 0;min-height:2px;transition:height .4s ease}
+  .tbar.zero{background:var(--line)}
+  .tcol .tv{font-size:10px;color:var(--muted)}
+  .tlabels{display:flex;gap:6px;margin-top:4px}
+  .tlabels span{flex:1;text-align:center;font-size:10px;color:var(--muted)}
+  .empty{color:var(--muted);padding:10px;text-align:center}
+  @media (max-width:480px){
+    .cat{grid-template-columns:84px 1fr auto}
+    .cat .v{min-width:80px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1><span>&gt;_</span> Daily Expense Tracker</h1>
+      <div class="tag">Log spending, spot where it goes. Amounts in RM. Nothing is saved between visits.</div>
+    </div>
+    <div class="total-chip"><small>Total spent</small><b id="grand">RM 0.00</b></div>
+  </header>
+
+  <!-- 1. Daily expense list -->
+  <section id="list-sec" aria-labelledby="h-list">
+    <div class="sec-head">
+      <h2 id="h-list"><i>01</i>Daily expense list</h2>
+      <select id="sort" class="sort" aria-label="Sort by date">
+        <option value="desc">Newest first</option>
+        <option value="asc">Oldest first</option>
+      </select>
+    </div>
+    <div class="rows" id="rows" aria-live="polite"></div>
+    <div class="foot"><span id="count">0 entries</span><span>Running total: <b id="runtotal">RM 0.00</b></span></div>
+    <div class="sample-note">First 3 entries are made-up samples for demonstration.</div>
+  </section>
+
+  <!-- 2. Add expense form -->
+  <section id="form-sec" aria-labelledby="h-form">
+    <div class="sec-head"><h2 id="h-form"><i>02</i>Add expense</h2></div>
+    <form id="form" novalidate>
+      <label>Date<input type="date" id="f-date" required></label>
+      <label>Category
+        <select id="f-cat">
+          <option>Food</option><option>Transport</option><option>Bills</option>
+          <option>Shopping</option><option>Health</option><option>Entertainment</option><option>Other</option>
+        </select>
+      </label>
+      <label class="full">Note<input type="text" id="f-note" maxlength="60" placeholder="e.g. Teh tarik &amp; roti canai"></label>
+      <label class="full">Amount (RM)<input type="number" id="f-amt" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+      <div class="err" id="err" role="alert"></div>
+      <button class="add" type="submit">+ ADD EXPENSE</button>
+    </form>
+  </section>
+
+  <!-- 3. Spending trend summary -->
+  <section id="sum-sec" aria-labelledby="h-sum">
+    <div class="sec-head"><h2 id="h-sum"><i>03</i>Spending trend summary</h2></div>
+    <p class="insight" id="insight"></p>
+    <div class="cats" id="cats"></div>
+    <h3 id="trend-title">Daily spend, last 7 days</h3>
+    <div class="trend" id="trend"></div>
+    <div class="tlabels" id="tlabels"></div>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var COLORS={Food:"#ff7a59",Transport:"#5b8cff",Bills:"#b388ff",Shopping:"#ff5fa2",Health:"#2ee6a6",Entertainment:"#ffd23f",Other:"#7fd4ff"};
+  var CATS=Object.keys(COLORS);
+
+  function pad(n){return (n<10?"0":"")+n}
+  function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+  function parse(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+  function shift(s,days){var d=parse(s);d.setDate(d.getDate()+days);return iso(d)}
+  function rm(n){return "RM "+n.toLocaleString("en-MY",{minimumFractionDigits:2,maximumFractionDigits:2})}
+  var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function fmtDate(s){var d=parse(s);return pad(d.getDate())+" "+MON[d.getMonth()]}
+
+  var today=iso(new Date());
+  var nextId=1;
+  // Made-up sample entries (Malaysia)
+  var expenses=[
+    {id:nextId++,date:shift(today,-2),cat:"Food",note:"Nasi lemak & teh tarik at mamak",amt:8.50},
+    {id:nextId++,date:shift(today,-1),cat:"Transport",note:"Touch 'n Go eWallet reload for LRT",amt:50.00},
+    {id:nextId++,date:today,cat:"Bills",note:"Unifi broadband top-up",amt:129.00}
+  ];
+  var newestId=null;
+
+  var el=function(id){return document.getElementById(id)};
+  var rowsEl=el("rows"),sortEl=el("sort");
+
+  function chrono(){ // oldest first, stable by id
+    return expenses.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.id-b.id});
+  }
+
+  function renderList(){
+    var c=chrono(),run={},acc=0;
+    c.forEach(function(e){acc+=e.amt;run[e.id]=acc});
+    var asc=sortEl.value==="asc";
+    var list=asc?c:c.slice().reverse();
+    rowsEl.textContent="";
+    list.forEach(function(e){
+      var r=document.createElement("div");
+      r.className="row"+(e.id===newestId?" new":"");
+      r.style.setProperty("--cat",COLORS[e.cat]);
+      var d=document.createElement("div");d.className="date";d.textContent=fmtDate(e.date);
+      var n=document.createElement("div");n.className="note";n.textContent=e.note||"(no note)";
+      var m=document.createElement("div");m.className="meta";
+      var p=document.createElement("span");p.className="pill";p.textContent=e.cat;m.appendChild(p);
+      var a=document.createElement("div");a.className="amt";a.textContent=rm(e.amt);
+      var s=document.createElement("small");s.textContent="Σ "+rm(run[e.id]);a.appendChild(s);
+      r.appendChild(d);r.appendChild(n);r.appendChild(a);r.appendChild(m);
+      // order: date | note / meta | amount
+      m.style.gridColumn="2";
+      rowsEl.appendChild(r);
+    });
+    el("count").textContent=expenses.length+(expenses.length===1?" entry":" entries");
+    el("runtotal").textContent=rm(acc);
+    el("grand").textContent=rm(acc);
+  }
+
+  function renderSummary(){
+    var totals={},sum=0;
+    CATS.forEach(function(k){totals[k]=0});
+    expenses.forEach(function(e){totals[e.cat]+=e.amt;sum+=e.amt});
+    var order=CATS.filter(function(k){return totals[k]>0}).sort(function(a,b){return totals[b]-totals[a]});
+    var top=order[0],max=top?totals[top]:0;
+    var ins=el("insight");
+    if(top){
+      ins.textContent="";
+      ins.appendChild(document.createTextNode("Biggest category: "));
+      var b=document.createElement("b");b.textContent=top;ins.appendChild(b);
+      ins.appendChild(document.createTextNode(" at "+rm(totals[top])+" ("+Math.round(totals[top]/sum*100)+"% of "+rm(sum)+")."));
+    } else ins.textContent="No spending yet.";
+
+    var box=el("cats");box.textContent="";
+    order.forEach(function(k){
+      var row=document.createElement("div");
+      row.className="cat"+(k===top?" top":"");
+      row.style.setProperty("--cat",COLORS[k]);
+      var l=document.createElement("div");l.textContent=k;
+      if(k===top){var bd=document.createElement("span");bd.className="badge";bd.textContent="TOP";l.appendChild(bd)}
+      var bar=document.createElement("div");bar.className="bar";
+      var f=document.createElement("div");f.style.width=(totals[k]/max*100)+"%";bar.appendChild(f);
+      var v=document.createElement("div");v.className="v";
+      v.textContent=rm(totals[k])+" ";
+      var sm=document.createElement("small");sm.textContent=Math.round(totals[k]/sum*100)+"%";v.appendChild(sm);
+      row.appendChild(l);row.appendChild(bar);row.appendChild(v);
+      box.appendChild(row);
+    });
+    if(!order.length){box.innerHTML='<div class="empty">Add an expense to see categories.</div>'}
+
+    // trend: 7 calendar days ending at latest entry date
+    var latest=expenses.reduce(function(m,e){return e.date>m?e.date:m},"0000-00-00");
+    if(latest==="0000-00-00")latest=today;
+    var days=[],i;
+    for(i=6;i>=0;i--)days.push(shift(latest,-i));
+    var dt={};days.forEach(function(d){dt[d]=0});
+    expenses.forEach(function(e){if(e.date in dt)dt[e.date]+=e.amt});
+    var dmax=Math.max.apply(null,days.map(function(d){return dt[d]}))||1;
+    el("trend-title").textContent="Daily spend, 7 days to "+fmtDate(latest);
+    var tr=el("trend"),tl=el("tlabels");tr.textContent="";tl.textContent="";
+    days.forEach(function(d){
+      var col=document.createElement("div");col.className="tcol";
+      var v=document.createElement("div");v.className="tv";v.textContent=dt[d]?Math.round(dt[d]):"";
+      var b=document.createElement("div");b.className="tbar"+(dt[d]?"":" zero");
+      b.style.height=(dt[d]?Math.max(4,dt[d]/dmax*80):2)+"px";
+      b.title=fmtDate(d)+": "+rm(dt[d]);
+      col.appendChild(v);col.appendChild(b);tr.appendChild(col);
+      var lb=document.createElement("span");lb.textContent=pad(parse(d).getDate());tl.appendChild(lb);
+    });
+  }
+
+  function renderAll(){renderList();renderSummary()}
+
+  // Feature 1: add
+  el("f-date").value=today;
+  el("form").addEventListener("submit",function(ev){
+    ev.preventDefault();
+    var date=el("f-date").value,cat=el("f-cat").value,note=el("f-note").value.trim(),
+        amt=parseFloat(el("f-amt").value),err=el("err");
+    if(!date){err.textContent="Pick a date.";return}
+    if(!(amt>0)||!isFinite(amt)){err.textContent="Enter an amount greater than 0.";el("f-amt").focus();return}
+    err.textContent="";
+    amt=Math.round(amt*100)/100;
+    var e={id:nextId++,date:date,cat:cat,note:note,amt:amt};
+    expenses.push(e);newestId=e.id;
+    el("f-note").value="";el("f-amt").value="";
+    renderAll();
+  });
+
+  // Feature 2: sort
+  sortEl.addEventListener("change",function(){newestId=null;renderList()});
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
